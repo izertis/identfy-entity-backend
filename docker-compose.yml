@@ -1,0 +1,55 @@
+version: "3.7"
+
+services:
+  redis:
+    image: redis
+
+  postgres:
+    image: postgres:12
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "postgres"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: identfy-backend
+    command: sh ./entrypoint.sh
+    environment:
+      SECRET_KEY: Local
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-localhost}"
+      DJANGO_SETTINGS_MODULE: project.settings
+      DEBUG: 1
+    volumes:
+      - .:/code/
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+      - redis
+
+  celery:
+    image: identfy-backend
+    command: celery -A project worker -l info -E
+    environment:
+      REDIS_HOST: redis
+      REDIS_BROKER_URL: "redis://redis:6379/0"
+      DEBUG: 1
+    volumes:
+      - .:/code/
+    depends_on:
+      - redis
+      - postgres
+
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=8888
+    ports:
+      - 8888:8888
+
+volumes:
+  postgres_data:

@@ -1,0 +1,41 @@
+name: CI
+
+on: [push]
+
+jobs:
+  backend:
+    runs-on: "ubuntu-latest"
+
+    container:
+      image: python:3.9
+
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.9"
+          architecture: "x64"
+
+      - name: Install deps
+        run:
+          pip install -r requirements.txt
+          pip install multiformats
+
+      - name: Run tests
+        run: |
+          coverage run --source='.' manage.py test
+        env:
+          PIPENV_VENV_IN_PROJECT: true
+          DATABASE_URL: postgresql://postgres:postgres@postgres:${{ job.services.postgres.ports[5432] }}/postgres?sslmode=disable

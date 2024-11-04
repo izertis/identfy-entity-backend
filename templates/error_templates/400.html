@@ -1,0 +1,42 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% translate "400 Bad Request" %}</title>
+    <style>
+        /* Your custom CSS styles go here */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f3f3;
+        }
+
+        .container {
+            text-align: center;
+            padding: 100px;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #ff5733;
+        }
+
+        p {
+            font-size: 18px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>{% translate "Oops! Bad Request" %}</h1>
+        <p>{% translate "The request you're looking for doesn't go well. Let's get you back on track:" %}</p>
+        <a href="/" style="text-decoration: none; color: #ff5733;">{% translate "Go to Homepage" %}</a>
+    </div>
+</body>
+
+</html>

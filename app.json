@@ -1,0 +1,20 @@
+{
+  "environments": {
+    "review": {
+      "addons": ["heroku-postgresql", "heroku-redis"],
+      "formation": {
+        "web": {
+          "quantity": 1,
+          "size": "basic"
+        },
+        "celery": {
+          "quantity": 1,
+          "size": "basic"
+        }
+      },
+      "name": "identfy-backend",
+      "scripts": {},
+      "stack": "container"
+    }
+  }
+}

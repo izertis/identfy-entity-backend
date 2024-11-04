@@ -1,0 +1,34 @@
+services:
+
+
+  postgres:
+    image: postgres:12
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB:=postgres
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: identfy-backend
+    environment:
+      - SECRET_KEY=Local
+      - "BACKEND_DOMAIN=http://localhost:8000"
+      - DJANGO_SETTINGS_MODULE=project.settings
+      - DEBUG=1
+      - DID=did:ebsi:zzpYmwyZhHEyDUgKKXmEjeW
+      - PRIVATE_KEY= d=1xV_KMmkExfsv5onKJBLNHYP2z-HEWBSBV205uVFhWU, x=ckG4pp0LYzoLlwH2nOlfSDQBB_QWUfY_FtEpZXyPSk8, y=go7hlsEYr3xrBReOOGrU_VWFIRstrWqLTVgkuBPhEAw, alg=ES256, crv=P-256, ext=True, kid=WwrwmJ5N_NiOXCZVt4yEIZBCWaBqCZIhFy4NXlV7tps, kty=EC
+      - PUBLIC_KEY= x=ckG4pp0LYzoLlwH2nOlfSDQBB_QWUfY_FtEpZXyPSk8, y=go7hlsEYr3xrBReOOGrU_VWFIRstrWqLTVgkuBPhEAw, alg=ES256, crv=P-256, ext=True, kid=WwrwmJ5N_NiOXCZVt4yEIZBCWaBqCZIhFy4NXlV7tps, kty=EC
+
+    volumes:
+      - .:/code/
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+
+
+volumes:
+  postgres_data:

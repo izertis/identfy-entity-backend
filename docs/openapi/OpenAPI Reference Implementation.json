@@ -1,0 +1,1865 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Enterprise Wallet API",
+    "termsOfService": "",
+    "license": {
+      "name": "MIT License"
+    },
+    "version": "v1"
+  },
+  "schemes": [
+    "https"
+  ],
+  "basePath": "/",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    },
+    "basic": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    },
+    {
+      "basic": []
+    }
+  ],
+  "paths": {
+    "/.well-known/openid-configuration": {
+      "get": {
+        "operationId": ".well-known_get_authorization_server_metadata",
+        "description": "GET Authorization Server Metadata",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/AuthorizationServer"
+            }
+          }
+        },
+        "tags": [
+          ".well-known"
+        ]
+      },
+      "parameters": []
+    },
+    "/.well-known/openid-credential-issuer": {
+      "get": {
+        "operationId": ".well-known_get_credential_issuer_metadata_by_issuer",
+        "description": "GET Credential Issuer Metadata",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CredentialIssuer"
+            }
+          }
+        },
+        "tags": [
+          ".well-known"
+        ]
+      },
+      "parameters": []
+    },
+    "/api/api-token-auth": {
+      "post": {
+        "operationId": "api_api-token-auth_create",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomTokenLogin"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CustomTokenLogin"
+            }
+          }
+        },
+        "tags": [
+          "api"
+        ]
+      },
+      "parameters": []
+    },
+    "/api/password_reset/": {
+      "post": {
+        "operationId": "api_password_reset_create",
+        "summary": "An Api View which provides a method to request a password reset token based on an e-mail address",
+        "description": "Sends a signal reset_password_token_created when a reset token was created",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Email"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Email"
+            }
+          }
+        },
+        "tags": [
+          "api"
+        ]
+      },
+      "parameters": []
+    },
+    "/api/password_reset/confirm/": {
+      "post": {
+        "operationId": "api_password_reset_confirm_create",
+        "description": "An Api View which provides a method to reset a password based on a unique token",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PasswordToken"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/PasswordToken"
+            }
+          }
+        },
+        "tags": [
+          "api"
+        ]
+      },
+      "parameters": []
+    },
+    "/api/password_reset/validate_token/": {
+      "post": {
+        "operationId": "api_password_reset_validate_token_create",
+        "description": "An Api View which provides a method to verify that a token is valid",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ResetToken"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/ResetToken"
+            }
+          }
+        },
+        "tags": [
+          "api"
+        ]
+      },
+      "parameters": []
+    },
+    "/auth/authorize": {
+      "get": {
+        "operationId": "auth_authorize",
+        "description": "GET Authorize",
+        "parameters": [
+          {
+            "name": "response_type",
+            "in": "query",
+            "description": "MUST be code",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "MUST include openid",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "issuer_state",
+            "in": "query",
+            "description": "The state from the issuer",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "The state from the client",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "description": "The client identifier",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "description": "The client's redirection endpoint",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "nonce",
+            "in": "query",
+            "description": "A random value generated by the client",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "description": "A challenge generated from the code_verifier",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "description": "The method used to generate the code_challenge",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "authorization_details",
+            "in": "query",
+            "description": "The authorization details",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "client_metadata",
+            "in": "query",
+            "description": "The client metadata",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "request",
+            "in": "query",
+            "description": "Signed request object",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "302": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/AuthorizeResponse"
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      },
+      "parameters": []
+    },
+    "/auth/direct_post": {
+      "post": {
+        "operationId": "auth_direct_post",
+        "description": "POST Direct_post",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreatedDirectPost"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CreatedDirectPost"
+            }
+          },
+          "302": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/AuthorizeResponse"
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      },
+      "parameters": []
+    },
+    "/auth/jwks": {
+      "get": {
+        "operationId": "auth_get_public_jwk",
+        "description": "GET Public Jwk",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/PublicJwk"
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      },
+      "parameters": []
+    },
+    "/auth/token": {
+      "post": {
+        "operationId": "auth_token_request",
+        "description": "POST Token",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TokenRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/TokenResponse"
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      },
+      "parameters": []
+    },
+    "/auth/token/{code}": {
+      "get": {
+        "operationId": "auth_exchange_preauth",
+        "description": "GET Preauth token validation",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "Preauth Code",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "pin",
+            "in": "query",
+            "description": "Pin",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "code",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/credential-offer/qr": {
+      "get": {
+        "operationId": "credential-offer_get_credential_offer_cross_device_by_issuer",
+        "description": "GET Credential Offer QR",
+        "parameters": [
+          {
+            "name": "pre-authorized_code",
+            "in": "query",
+            "description": "Preauthorize code",
+            "type": "string"
+          },
+          {
+            "name": "user_pin_required",
+            "in": "query",
+            "description": "User pin required",
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Qr"
+            }
+          }
+        },
+        "tags": [
+          "credential-offer"
+        ]
+      },
+      "parameters": []
+    },
+    "/credential-offer/url": {
+      "get": {
+        "operationId": "credential-offer_get_credential_offer_same_device_by_issuer",
+        "description": "GET Credential Offer",
+        "parameters": [
+          {
+            "name": "pre-authorized_code",
+            "in": "query",
+            "description": "Preauthorize code",
+            "type": "string"
+          },
+          {
+            "name": "user_pin_required",
+            "in": "query",
+            "description": "User pin required",
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "302": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/IssuanceOfferResponse"
+            }
+          }
+        },
+        "tags": [
+          "credential-offer"
+        ]
+      },
+      "parameters": []
+    },
+    "/credential_deferred/": {
+      "post": {
+        "operationId": "deferred_credentials",
+        "description": "POST Deferred Credentials",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Auth Token",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CredentialResponse"
+            }
+          }
+        },
+        "tags": [
+          "deferred_credentials"
+        ]
+      },
+      "parameters": []
+    },
+    "/credentials/": {
+      "post": {
+        "operationId": "credentials",
+        "description": "POST Credentials",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EbsiCredentialRequest"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "Auth Token",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/CredentialResponse"
+            }
+          }
+        },
+        "tags": [
+          "credentials"
+        ]
+      },
+      "parameters": []
+    },
+    "/credentials/external-data/": {
+      "get": {
+        "operationId": "credentials_external_data_credentials",
+        "description": "GET Credential External Data",
+        "parameters": [
+          {
+            "name": "vc_type",
+            "in": "query",
+            "description": "Credential Schema Name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "User identifier",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pin",
+            "in": "query",
+            "description": "User identifier",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/ExternalDataResponse"
+            }
+          }
+        },
+        "tags": [
+          "credentials"
+        ]
+      },
+      "parameters": []
+    },
+    "/credentials/status/list/{list_id}/": {
+      "get": {
+        "operationId": "credentials_status_credential_status",
+        "description": "GET VC Status",
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "description": "VC Identifier",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "credentials"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "list_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/credentials/{vc_id}/status/": {
+      "put": {
+        "operationId": "credentials_change_credential_status",
+        "description": "Put Issued Credential Status",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChangeStatus"
+            }
+          },
+          {
+            "name": "vc_id",
+            "in": "path",
+            "description": "VC Identifier",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "credentials"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "vc_id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/deferred/exchange/{code}/": {
+      "get": {
+        "operationId": "deferred_exchange_deferred",
+        "description": "GET Deferred token validation",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "Deferred Code",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "deferred"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "code",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/deferred/register/": {
+      "post": {
+        "operationId": "deferred_register_deferred",
+        "description": "POST Registry Deferred token",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DeferredRegistry"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "deferred"
+        ]
+      },
+      "parameters": []
+    },
+    "/features/feature-toggle/get_all_toggles/": {
+      "get": {
+        "operationId": "features_feature-toggle_get_all_toggles",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/FeatureToggle"
+            }
+          }
+        },
+        "tags": [
+          "features"
+        ]
+      },
+      "parameters": []
+    },
+    "/issuance-flow": {
+      "get": {
+        "operationId": "vc_issuance_flow",
+        "description": "Issuance Flow",
+        "parameters": [
+          {
+            "name": "credential_types",
+            "in": "query",
+            "description": "Credential Type",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/IssuanceFlow"
+            }
+          }
+        },
+        "tags": [
+          "vc_issuance_flow"
+        ]
+      },
+      "parameters": []
+    },
+    "/nonce-manager": {
+      "get": {
+        "operationId": "nonce-manager_list",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/NonceManager"
+              }
+            }
+          }
+        },
+        "tags": [
+          "nonce-manager"
+        ]
+      },
+      "post": {
+        "operationId": "nonce-manager_create",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        },
+        "tags": [
+          "nonce-manager"
+        ]
+      },
+      "parameters": []
+    },
+    "/nonce-manager/{nonce}": {
+      "get": {
+        "operationId": "nonce-manager_read",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        },
+        "tags": [
+          "nonce-manager"
+        ]
+      },
+      "put": {
+        "operationId": "nonce-manager_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        },
+        "tags": [
+          "nonce-manager"
+        ]
+      },
+      "patch": {
+        "operationId": "nonce-manager_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/NonceManager"
+            }
+          }
+        },
+        "tags": [
+          "nonce-manager"
+        ]
+      },
+      "delete": {
+        "operationId": "nonce-manager_delete",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "nonce-manager"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "nonce",
+          "in": "path",
+          "description": "A unique value identifying this Nonce Manager.",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/offers/{id}": {
+      "get": {
+        "operationId": "get_credential_offer_by_pk",
+        "description": "GET Credential Offer Json",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Offer Identifier",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "pre-authorized_code",
+            "in": "query",
+            "description": "Preauthorize code",
+            "type": "string"
+          },
+          {
+            "name": "user_pin_required",
+            "in": "query",
+            "description": "User pin required",
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/IssuanceOfferResponse"
+            }
+          }
+        },
+        "tags": [
+          "get_credential_offer_by_pk"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/presentation-offer-request/qr": {
+      "get": {
+        "operationId": "presentation-offer-request_get_presentation_offer_cross_device_by_verifier",
+        "description": "GET Presentation Offer QR",
+        "parameters": [
+          {
+            "name": "verify_flow",
+            "in": "query",
+            "description": "Verifiable Presentation Scope",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "State code",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Qr"
+            }
+          }
+        },
+        "tags": [
+          "presentation-offer-request"
+        ]
+      },
+      "parameters": []
+    },
+    "/presentation-offer-request/url": {
+      "get": {
+        "operationId": "presentation-offer-request_get_presentation_offer_same_device_by_verifier",
+        "description": "GET Presentation Offer",
+        "parameters": [
+          {
+            "name": "verify_flow",
+            "in": "query",
+            "description": "Verifiable Presentation Scope",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "State code",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "302": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/PresentationResponse"
+            }
+          }
+        },
+        "tags": [
+          "presentation-offer-request"
+        ]
+      },
+      "parameters": []
+    },
+    "/presentations/external-data": {
+      "post": {
+        "operationId": "presentations_get_claims_validation",
+        "description": "Post Claims Verification",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ExternalDataRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/ClaimsVerification"
+            }
+          }
+        },
+        "tags": [
+          "presentations"
+        ]
+      },
+      "parameters": []
+    },
+    "/verify-flow": {
+      "get": {
+        "operationId": "verify_flow",
+        "description": "Verify Flow",
+        "parameters": [
+          {
+            "name": "verifier",
+            "in": "query",
+            "description": "Verifier Identifier",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Scope",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/VerifyFlow"
+            }
+          }
+        },
+        "tags": [
+          "verify_flow"
+        ]
+      },
+      "parameters": []
+    },
+    "/{id}/presentation-offer": {
+      "get": {
+        "operationId": "get_presentation_offer",
+        "description": "GET Presentation Offer Json",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Verifiable Presentation Scope id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "State code",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/PresentationOfferJsonResponse"
+            }
+          }
+        },
+        "tags": [
+          "get_presentation_offer"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "AuthorizationServer": {
+      "required": [
+        "issuer",
+        "authorization_endpoint",
+        "token_endpoint",
+        "jwks_uri",
+        "scopes_supported",
+        "response_types_supported",
+        "response_modes_supported",
+        "grant_types_supported",
+        "subject_types_supported",
+        "id_token_signing_alg_values_supported",
+        "request_object_signing_alg_values_supported",
+        "request_parameter_supported",
+        "request_uri_parameter_supported",
+        "token_endpoint_auth_methods_supported",
+        "vp_formats_supported",
+        "subject_syntax_types_supported",
+        "subject_trust_frameworks_supported",
+        "id_token_types_supported"
+      ],
+      "type": "object",
+      "properties": {
+        "issuer": {
+          "title": "Issuer",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "authorization_endpoint": {
+          "title": "Authorization endpoint",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "token_endpoint": {
+          "title": "Token endpoint",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "jwks_uri": {
+          "title": "Jwks uri",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "scopes_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "response_types_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "response_modes_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "grant_types_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "subject_types_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "id_token_signing_alg_values_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "request_object_signing_alg_values_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "request_parameter_supported": {
+          "title": "Request parameter supported",
+          "type": "boolean"
+        },
+        "request_uri_parameter_supported": {
+          "title": "Request uri parameter supported",
+          "type": "boolean"
+        },
+        "token_endpoint_auth_methods_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "vp_formats_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "subject_syntax_types_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "subject_trust_frameworks_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "id_token_types_supported": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        }
+      }
+    },
+    "CredentialIssuer": {
+      "required": [
+        "authorization_server",
+        "credential_issuer",
+        "credential_endpoint",
+        "deferred_credential_endpoint",
+        "credentials_supported"
+      ],
+      "type": "object",
+      "properties": {
+        "authorization_server": {
+          "title": "Authorization server",
+          "type": "string",
+          "maxLength": 2255,
+          "minLength": 1
+        },
+        "credential_issuer": {
+          "title": "Credential issuer",
+          "type": "string",
+          "maxLength": 2255,
+          "minLength": 1
+        },
+        "credential_endpoint": {
+          "title": "Credential endpoint",
+          "type": "string",
+          "maxLength": 2255,
+          "minLength": 1
+        },
+        "deferred_credential_endpoint": {
+          "title": "Deferred credential endpoint",
+          "type": "string",
+          "maxLength": 2255,
+          "minLength": 1
+        },
+        "credentials_supported": {
+          "title": "Credentials supported",
+          "type": "object"
+        }
+      }
+    },
+    "CustomTokenLogin": {
+      "required": [
+        "username",
+        "password"
+      ],
+      "type": "object",
+      "properties": {
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Email": {
+      "required": [
+        "email"
+      ],
+      "type": "object",
+      "properties": {
+        "email": {
+          "title": "Email",
+          "type": "string",
+          "format": "email",
+          "minLength": 1
+        }
+      }
+    },
+    "PasswordToken": {
+      "required": [
+        "password",
+        "token"
+      ],
+      "type": "object",
+      "properties": {
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        },
+        "token": {
+          "title": "Token",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ResetToken": {
+      "required": [
+        "token"
+      ],
+      "type": "object",
+      "properties": {
+        "token": {
+          "title": "Token",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "AuthorizeResponse": {
+      "required": [
+        "location"
+      ],
+      "type": "object",
+      "properties": {
+        "location": {
+          "title": "Location",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        }
+      }
+    },
+    "CreatedDirectPost": {
+      "type": "object",
+      "properties": {
+        "id_token": {
+          "title": "Id token",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "vp_token": {
+          "title": "Vp token",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "presentation_submission": {
+          "title": "Presentation submission",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        }
+      }
+    },
+    "PublicJwk": {
+      "required": [
+        "keys"
+      ],
+      "type": "object",
+      "properties": {
+        "keys": {
+          "title": "Keys",
+          "type": "string",
+          "maxLength": 2255,
+          "minLength": 1
+        }
+      }
+    },
+    "TokenRequest": {
+      "required": [
+        "client_id",
+        "client_assertion_type"
+      ],
+      "type": "object",
+      "properties": {
+        "grant_type": {
+          "title": "Grant type",
+          "description": "It can be authorization_code or urn:ietf:params:oauth:grant-type:pre-authorized_code",
+          "type": "string",
+          "default": "authorization_code",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "client_id": {
+          "title": "Client id",
+          "description": "The client identifier",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "code": {
+          "title": "Code",
+          "description": "The authorization code",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "code_verifier": {
+          "title": "Code verifier",
+          "description": "The code verifier for the PKCE request",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "pre_authorized_code": {
+          "title": "Pre authorized code",
+          "description": "The pre-authorised code",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "user_pin": {
+          "title": "User pin",
+          "description": "User pin",
+          "type": "integer"
+        },
+        "client_assertion_type": {
+          "title": "Client assertion type",
+          "description": "The assertion type",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "client_assertion": {
+          "title": "Client assertion",
+          "description": "The assertion specified by client_assertion_type",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        }
+      }
+    },
+    "TokenResponse": {
+      "required": [
+        "access_token",
+        "token_type",
+        "expires_in",
+        "c_nonce",
+        "c_nonce_expires_in"
+      ],
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "title": "Access token",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "token_type": {
+          "title": "Token type",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "expires_in": {
+          "title": "Expires in",
+          "type": "integer"
+        },
+        "c_nonce": {
+          "title": "C nonce",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "c_nonce_expires_in": {
+          "title": "C nonce expires in",
+          "type": "integer"
+        }
+      }
+    },
+    "Qr": {
+      "type": "object",
+      "properties": {
+        "qr": {
+          "title": "Qr",
+          "type": "string",
+          "readOnly": true,
+          "format": "uri"
+        }
+      }
+    },
+    "IssuanceOfferResponse": {
+      "required": [
+        "credential_offer"
+      ],
+      "type": "object",
+      "properties": {
+        "credential_offer": {
+          "title": "Credential offer",
+          "type": "object"
+        },
+        "pin": {
+          "title": "Pin",
+          "type": "integer"
+        }
+      }
+    },
+    "CredentialResponse": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "title": "Format",
+          "type": "string",
+          "default": "jwt_vc",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "credential": {
+          "title": "Credential",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "acceptance_token": {
+          "title": "Acceptance token",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        },
+        "c_nonce": {
+          "title": "C nonce",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "c_nonce_expires_in": {
+          "title": "C nonce expires in",
+          "type": "integer"
+        }
+      }
+    },
+    "EbsiCredentialRequest": {
+      "required": [
+        "types",
+        "proof"
+      ],
+      "type": "object",
+      "properties": {
+        "types": {
+          "title": "Types",
+          "description": "Credential types requested",
+          "type": "object"
+        },
+        "format": {
+          "title": "Format",
+          "description": "Format of the returned credentials",
+          "type": "string",
+          "default": "jwt_vc",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "proof": {
+          "title": "Proof",
+          "description": "Proof object containing proof_type and jwt",
+          "type": "object"
+        }
+      }
+    },
+    "ExternalDataResponse": {
+      "type": "object",
+      "properties": {
+        "credential_data": {
+          "title": "Credential data",
+          "description": "Credential data",
+          "type": "object"
+        },
+        "schema_addr": {
+          "title": "Schema addr",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        }
+      }
+    },
+    "ChangeStatus": {
+      "required": [
+        "status"
+      ],
+      "type": "object",
+      "properties": {
+        "status": {
+          "title": "Status",
+          "description": "revoke",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        }
+      }
+    },
+    "DeferredRegistry": {
+      "required": [
+        "client_id",
+        "vc_type"
+      ],
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "title": "Client id",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "vc_type": {
+          "title": "Vc type",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "pin": {
+          "title": "Pin",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        }
+      }
+    },
+    "FeatureToggle": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "The human/computer readable name.",
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 1
+        },
+        "active": {
+          "title": "Active",
+          "description": "Is this switch active?",
+          "type": "boolean"
+        }
+      }
+    },
+    "PresentationDefinition": {
+      "required": [
+        "id",
+        "format",
+        "input_descriptors"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "title": "Format",
+          "type": "object"
+        },
+        "input_descriptors": {
+          "title": "Input descriptors",
+          "type": "object"
+        }
+      }
+    },
+    "IssuanceFlow": {
+      "required": [
+        "credential_types",
+        "credential_schema_address"
+      ],
+      "type": "object",
+      "properties": {
+        "scope": {
+          "title": "Scope",
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        },
+        "response_type": {
+          "title": "Response Type",
+          "type": "string",
+          "enum": [
+            "vp_token",
+            "id_token"
+          ]
+        },
+        "is_deferred": {
+          "title": "Deferred",
+          "type": "boolean"
+        },
+        "credential_types": {
+          "title": "Credential Type",
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        },
+        "credential_schema_address": {
+          "title": "Credential Schema",
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        },
+        "presentation_definition": {
+          "$ref": "#/definitions/PresentationDefinition"
+        },
+        "revocation": {
+          "title": "Type of revocation on EBSI",
+          "type": "string",
+          "enum": [
+            "status_list_2021"
+          ],
+          "x-nullable": true
+        },
+        "expires_in": {
+          "title": "Expires in (s)",
+          "type": "integer",
+          "maximum": 2147483647,
+          "minimum": 0,
+          "x-nullable": true
+        }
+      }
+    },
+    "NonceManager": {
+      "required": [
+        "nonce",
+        "did"
+      ],
+      "type": "object",
+      "properties": {
+        "nonce": {
+          "title": "Nonce",
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        },
+        "state": {
+          "title": "State",
+          "type": "object",
+          "x-nullable": true
+        },
+        "did": {
+          "title": "Did",
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        }
+      }
+    },
+    "PresentationResponse": {
+      "required": [
+        "presentation_offer"
+      ],
+      "type": "object",
+      "properties": {
+        "presentation_offer": {
+          "title": "Presentation offer",
+          "type": "string",
+          "maxLength": 1255,
+          "minLength": 1
+        }
+      }
+    },
+    "ExternalDataRequest": {
+      "required": [
+        "data"
+      ],
+      "type": "object",
+      "properties": {
+        "data": {
+          "title": "Data",
+          "type": "object"
+        }
+      }
+    },
+    "ClaimsVerification": {
+      "required": [
+        "verified"
+      ],
+      "type": "object",
+      "properties": {
+        "verified": {
+          "title": "Verified",
+          "type": "boolean"
+        }
+      }
+    },
+    "VerifyFlow": {
+      "required": [
+        "scope"
+      ],
+      "type": "object",
+      "properties": {
+        "scope": {
+          "title": "Scope",
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        },
+        "response_type": {
+          "title": "Response Type",
+          "type": "string",
+          "enum": [
+            "vp_token",
+            "id_token"
+          ]
+        },
+        "presentation_definition": {
+          "$ref": "#/definitions/PresentationDefinition"
+        }
+      }
+    },
+    "PresentationOfferJsonResponse": {
+      "required": [
+        "request"
+      ],
+      "type": "object",
+      "properties": {
+        "request": {
+          "title": "Request",
+          "type": "string",
+          "maxLength": 2255,
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

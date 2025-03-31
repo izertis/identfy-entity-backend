@@ -1,8 +1,6 @@
 <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./docs/img/identfy-logo-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="./docs/img/identfy-logo-light.svg">
-      <img alt="identfy" src="./docs/img/identfy.png" width="350" style="max-width: 100%;">
+      <img alt="identfy" src="./docs/img/header-identfy.jpg" style="max-width: 100%;">
     </picture>
 </p>
 

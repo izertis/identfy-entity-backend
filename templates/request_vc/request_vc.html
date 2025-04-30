@@ -1,0 +1,278 @@
+{% extends "admin/base_site.html" %}
+
+{% load static %}
+
+{% block content %}
+<!-- Modal Box -->
+<div class="modal fade" tabindex="-1" id="loadingModal" style="z-index: 1050 !important;">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title"></h5>
+      </div>
+      <div class="modal-body">
+
+        <div class="d-flex justify-content-center">
+          <div class="spinner-border text-primary" role="status" id="loading">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+
+        <div id="errorMessage" class="alert alert-danger mt-3 d-none"></div>
+
+        <textarea id="resultText" class="form-control mt-3" rows="20" style="display: none;"></textarea>
+      </div>
+      <div class="modal-footer" id="modal-footer" style="display: none;">
+        <button type="button" class="btn btn-primary" data-dismiss="modal"
+          style="background-color: #EB5B5B;">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Form -->
+<div class="container" id="vc-request">
+  <h1>Request Verifiable Credential</h1>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <!-- Insert Credential Offer -->
+      <label for="offer-area" class="mt-1">Insert Credential Offer</label>
+      <textarea class="form-control" id="offer-area" rows="3"></textarea>
+      <button disabled id="resolve_button" class="mt-2 btn btn-primary">Resolve Offer</button>
+      <!-- Choose Credential Type -->
+      <div id="type-div-container" class="d-none form-group">
+        <label class="pt-2" for="type">Choose the type to request:</label>
+        <select id="select-type" name="VcType" class="form-control">
+          <option value="">-- Select one type --</option>
+        </select>
+      </div>
+      <div class="form-group row d-none" id="pin-container">
+        <label for="pinInput" class="col-auto col-form-label">PIN Code:</label>
+        <div class="col">
+          <input type="number" class="form-control" id="pin-code-input" placeholder="1234...">
+        </div>
+      </div>
+    </div>
+    <button disabled id="send_button" type="submit" class="mt-2 btn btn-primary">Send Request</button>
+  </form>
+</div>
+
+<script>
+  const offerArea = document.getElementById("offer-area");
+  const resolveButton = document.getElementById("resolve_button");
+  const sendButton = document.getElementById("send_button");
+  const typeSelect = document.getElementById("select-type");
+  const modalTitle = document.getElementById("modal-title");
+  const pinInput = document.getElementById("pin-code-input");
+  let pinRequired = false;
+  let typeSelected = false;
+  let pinProvided = false;
+  let offer;
+
+  offerArea.addEventListener("input", function () {
+    if (this.value.trim().length) {
+      resolveButton.disabled = false;
+    } else {
+      resolveButton.disabled = true;
+    }
+  });
+
+  pinInput.addEventListener("input", function () {
+    if (this.value.trim().length) {
+      pinProvided = true;
+    } else {
+      pinProvided = false;
+    }
+    checkTypeButton();
+  });
+
+  sendButton.addEventListener("click", function (event) {
+    event.preventDefault();
+    modalTitle.innerText = "Requesting Verifiable Credential";
+    showLoadingModal()
+      .then(() => {
+        const backend = "{{ backend }}";
+        const url = `${backend}/credentials/request/`;
+        return fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: JSON.stringify({
+            credential_offer: offerArea.value,
+            vc_type: JSON.parse(typeSelect.value),
+            pin_code: pinInput.value ? pinInput.value : undefined
+          })
+        });
+      })
+      .then(async (response) => {
+        if (!response.ok) {
+          return Promise.reject(
+            `Error ${response.status} during request.
+            Error ${JSON.stringify(await response.text())}`
+          );
+        }
+        const content = await response.json();
+        const resultText = document.getElementById("resultText");
+        resultText.value = JSON.stringify(content, null, " ");
+        resultText.style.display = "block";
+      })
+      .catch((error) => {
+        const errorSection = document.getElementById("errorMessage");
+        errorSection.innerText = error;
+        errorSection.classList.remove("d-none");
+      })
+      .finally(() => {
+        const loader = document.getElementById("loading");
+        loader.classList.add("d-none");
+        const modalFooter = document.getElementById("modal-footer");
+        modalFooter.style.display = "block";
+      });
+  });
+
+  typeSelect.addEventListener("change", function () {
+    if (this.value) {
+      sendButton.disabled = false;
+      typeSelected = true;
+    } else {
+      sendButton.disabled = true;
+      typeSelected = false;
+    }
+  });
+
+  function checkTypeButton() {
+    if (typeSelected && ((pinRequired && pinProvided) || (!pinRequired && !pinProvided))) {
+      resolveButton.disabled = false;
+    } else {
+      resolveButton.disabled = true;
+    }
+  }
+
+  resolveButton.addEventListener("click", function (event) {
+    event.preventDefault();
+    modalTitle.innerText = "Resolving Credential Offer";
+    showLoadingModal()
+      .then(() => {
+        const backend = "{{ backend }}";
+        const url = `${backend}/credential-offer/`;
+        return fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: JSON.stringify({
+            credential_offer: offerArea.value,
+          })
+        });
+      })
+      .then(async (response) => {
+        if (!response.ok) {
+          return Promise.reject(
+            `Error ${response.status} during request.
+            Error ${JSON.stringify(await response.text())}`
+          );
+        }
+        const content = await response.json();
+        offer = offerArea.value;
+        $('#loadingModal').modal('hide');
+        addSelectionTypes(content.credentials);
+        showPinInput(content.grants);
+      })
+      .catch((error) => {
+        const errorSection = document.getElementById("errorMessage");
+        errorSection.innerText = error;
+        errorSection.classList.remove("d-none");
+        const modalFooter = document.getElementById("modal-footer");
+        modalFooter.style.display = "block";
+      })
+      .finally(() => {
+        const loader = document.getElementById("loading");
+        loader.classList.add("d-none");
+      });
+  });
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      let cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.startsWith(name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function showPinInput(grants) {
+    if (grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"] &&
+      grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["user_pin_required"]) {
+      pinRequired = true;
+      const pinDiv = document.getElementById("pin-container");
+      pinDiv.classList.remove("d-none");
+      return;
+    }
+    const pinDiv = document.getElementById("pin-container");
+    pinDiv.classList.add("d-none");
+    pinRequired = false;
+  }
+
+  function showLoadingModal() {
+    const resultText = document.getElementById("resultText");
+    resultText.style.display = "none";
+    resultText.value = "";
+    const errorSection = document.getElementById("errorMessage");
+    errorSection.classList.add("d-none");
+    const loader = document.getElementById("loading");
+    loader.classList.remove("d-none");
+    const modalFooter = document.getElementById("modal-footer");
+    modalFooter.style.display = "none";
+    return new Promise((resolve) => {
+      let loadingModal = $("#loadingModal");
+      loadingModal.modal({
+        backdrop: false,
+        keyboard: false,
+        focus: false
+      });
+      loadingModal.one("shown.bs.modal", function () {
+        resolve();
+      });
+      // REMOVE BLUR EFFECT -> DONT KWOW WHY IT HAPPENS
+      document.body.style.filter = "none";
+      document.querySelectorAll("*").forEach(el => {
+        if (window.getComputedStyle(el).filter.includes("blur")) {
+          el.style.filter = "none";
+        }
+      });
+      loadingModal.modal("show");
+    });
+  }
+
+  function addSelectionTypes(credentialsData) {
+    let types = [];
+    for (const credentialInfo of credentialsData) {
+      types.push(JSON.stringify(credentialInfo.types))
+    }
+    const divContainer = document.getElementById("type-div-container");
+    const typesSelector = document.getElementById("select-type");
+    typesSelector.innerHTML = "";
+    const basicOption = document.createElement("option");
+    basicOption.textContent = "-- Select one type --";
+    basicOption.value = "";
+    typesSelector.appendChild(basicOption);
+    for (const type of types) {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = type;
+      typesSelector.appendChild(option);
+    }
+    divContainer.classList.remove("d-none");
+  }
+
+</script>
+{% endblock %}

@@ -1,62 +1,44 @@
-<p align="center">
-    <picture>
-      <img alt="identfy" src="./docs/img/header-identfy.jpg" style="max-width: 100%;">
-    </picture>
-</p>
+# Identfy-Backend
 
-<p align="center">
-  <h4>
-    An all-in-one solution to take control of your digital identity
-  </h4>
-</p>
+## 1. Services
 
-<br/>
+### Backend
 
-**[identfy](https://github.com/izertis/red.es-identfy)** is a combination of various products that enable building user-centric solutions.
+This project provides an Enterprise wallet and an Issuer to credential issuance in different networks.
 
-# identfy Entity backend
+## 2. Requirements
 
-**identfy Entity backend** is an administration platform to manage VC. The identfy Entity backend does not implement any logic related to VC or identity management. This backend is more the core that connects and manages the communication with others, as well as exposing itself to the network.
-
-
-## Table of content:
-
-- [How to start using it](#usage)
-- [Development guide](#development-guide)
-- [License](#license)
-- [Trademark](#trademark)
-
-
-## Usage
-
-The identfy Entity backend can be run in Docker. We need to have docker (docker-engine) and docker-compose installed
-
-### Configuration
-
-Configure the following environment vars:
+- Python 3.12
+- You can install all the requirements with:
 
 ```bash
-# Django envs
-ALLOWED_HOSTS = ""
-CSRF_TRUSTED_ORIGINS = ""
-CORS_ALLOWED_ORIGINS = ""
-
-# OpenID Service
-CREDENTIALS_URL = "" # identfy-service
-
-# Own Data - (probably, some are not required)
-DID = ""
-PRIVATE_KEY = "" # Private Key in JWK format and crv P-256
-PUBLIC_KEY = "" # Public Key in JWK format and crv P-256
-EXTERNAL_URL = "" # To retrieve data to complete the Credential
-BACKEND_DOMAIN: "https://example.com" # URL of deployed instance
-VC_SERVICE_URL: "https://vc_service_example.com" # URL of Verifiable Credentials Service
-DEVELOPER_MOCKUP_ENTITIES: True # If you want to check it, without real data active.
-ENTITY_URL: "https://external-data.com" # URL of the enterprise to have data
-EXTERNAL_API_KEY = ""
+pip install -r requirements.txt
+or
+pip3 install -r requirements.txt
 ```
 
-### Build
+## 3. Deployment
+
+To deploy this repo locally, you need to follow these steps
+
+### step-0
+
+You need firstly to pay attention to continue config vars
+
+```bash
+BACKEND_DOMAIN: "https://example.com" # URL of deployed instance
+DID: "did:ebsi:zzpYmwyZhHEyDUgKKXmEjeW" # EBSI Did
+VC_SERVICE_URL: "https://vc_service_example.com" # URL of Verifiable Credentials Service
+DEVELOPER_MOCKUP_ENTITIES: True # If you want to check it, without real data active.
+ENTITY_URL: "https://external-data.com" # URL of the Authentic Source. Needed for the required integration
+ENTITY_API_KEY: # Api Key to include in each request to the backend with the user data
+EBSI_DIDR_URL: "https://api-pilot.ebsi.eu/did-registry/v5/identifiers" # URL of EBSI DID Registry
+EBSI_TIR_URL: "https://api-pilot.ebsi.eu/trusted-issuers-registry/v5/issuers" # URL of EBSI TI Registry
+```
+
+### step-1
+
+The backend runs in Docker. We need to have docker (docker-engine) and docker-compose installed
 
 To build Docker images (remember that you have to do this everytime you add a new dependency to Pipfile too)
 
@@ -64,7 +46,7 @@ To build Docker images (remember that you have to do this everytime you add a ne
 docker compose build
 ```
 
-### User configuration
+### step-2
 
 The first time we start the project locally it will be necessary to migrate the data and create a superuser
 
@@ -73,29 +55,10 @@ docker compose run --rm backend python manage.py migrate
 docker compose run --rm backend python manage.py createsuperuser
 ```
 
-### Start up
+### step-3
 
 Start everything (redis, postgress, server, celery and rest of things written in docker-compose.yml)
 
 ```bash
 docker compose up --build
 ```
-
-
-## Development guide
-
-If you are interested on testing and building it by yourself or you would like to contribute, you can find here the [development guide](./docs/GETTING_STARTED.md)
-
-
-## Help and Documentation
-
-- *Contact:* send an email to blockchain@izertis.com
-- [Github discussions](https://github.com/izertis/identfy-entity-backend/discussions) - Help and general questions about this project
-
-
-# License
-This software is dual-licensed; you can choose between the terms of the [Affero GNU General Public License version 3 (AGPL-3.0)](./LICENSES/agpl-3.0.txt) or a [commercial license](./LICENSES/commercial.txt). Look at [LICENSE](./LICENSE.md) file for more information.
-
-
-# Trademark
-**identfy** and its logo are registered trademarks of [Izertis](https://www.izertis.com)

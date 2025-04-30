@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import sentry_sdk
 from django.utils.translation import gettext_lazy as _
-from environs import Env
 
 
 def readEnvBool(envVarName: str, default: bool) -> bool:
@@ -41,7 +40,7 @@ DEBUG = int(os.environ.get("DEBUG", 1))
 DJANGO_ENVIRONMENT = os.environ.get("DJANGO_ENVIRONMENT", "local")
 
 
-BACKEND_DOMAIN = os.environ.get("BACKEND_DOMAIN")
+BACKEND_DOMAIN = os.environ.get("BACKEND_DOMAIN", "http://localhost:8000")
 
 DOMAIN_WITHOUT_PROTOCOL = BACKEND_DOMAIN.replace("https://", "").replace("http://", "")
 
@@ -84,7 +83,6 @@ INSTALLED_APPS = [
     "django_json_widget",
     "django_jsonform",
     "rest_framework",
-    "waffle",
     "drf_yasg",
     "rest_framework.authtoken",
     "corsheaders",
@@ -92,12 +90,13 @@ INSTALLED_APPS = [
     "django_rest_passwordreset",
     "django_filters",
     # owner izertis
-    "feature_toggle_manager",
+    "organizations",
     "tasks_protocol",
     "credentials",
     "openid",
     "project_commands",
     "user",
+    "ebsi",
 ]
 
 MIDDLEWARE = [
@@ -110,7 +109,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "waffle.middleware.WaffleMiddleware",
 ]
 
 ROOT_URLCONF = "project.urls"
@@ -225,6 +223,20 @@ else:
     EMAIL_USE_TLS = False
     EMAIL_USE_SSL = False
 
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication,",
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.DjangoModelPermissions",
+    ],
+}
 
 if not DEBUG:
     sentry_sdk.init(
@@ -237,22 +249,13 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication,",
-        "rest_framework.authentication.BasicAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-}
-
 SIMPLE_JWT = {
     "TOKEN_OBTAIN_SERIALIZER": "user.serializers.CustomTokenLoginSerializer",
     "ACCESS_TOKEN_LIFETIME": timedelta(
         minutes=os.environ.get("ACCESS_TOKEN_LIFETIME", 15)
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=os.environ.get("REFRESH_TOKEN_LIFETIME", 1)
+        hours=os.environ.get("REFRESH_TOKEN_LIFETIME", 1)
     ),
 }
 
@@ -329,17 +332,21 @@ JAZZMIN_SETTINGS: Dict[str, Any] = {
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
         "authtoken.tokenproxy": "fas fa-magic",
-        "waffle.flag": "fas fa-flag",
-        "waffle.sample": "fas fa-eye-dropper",
-        "waffle.switch": "fas fa-check-circle",
+        "django_celery_results.groupresult": "far fa-object-group",
+        "django_celery_results.taskresult": "fas fa-tasks",
         "django_rest_passwordreset.resetpasswordtoken": "fas fa-exchange-alt",
+        "organizations.organizationkeys": "fas fa-key",
         "openid.issuanceinformation": "fab fa-openid",
         "openid.verifiermetadata": "fas fa-database",
         "openid.presentationdefinition": "fas fa-book",
         "openid.issuanceflow": "fas fa-edit",
         "openid.verifyflow": "fas fa-envelope-open",
         "openid.noncemanager": "fas fa-random",
+        "credentials.verifiablecredential": "fas fa-id-card-alt",
         "credentials.issuedverifiablecredential": "fas fa-folder",
+        "ebsi.accreditationtoattest": "fas fa-address-card",
+        "ebsi.accreditationtoaccredit": "fas fa-file-signature",
+        "ebsi.accreditationtoonboard": "fas fa-user-plus",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
@@ -361,8 +368,19 @@ JAZZMIN_SETTINGS: Dict[str, Any] = {
     "changeform_format_overrides": {
         "auth.user": "collapsible",
         "auth.group": "vertical_tabs",
+        "organizations.organization": "vertical_tabs",
     },
     "language_chooser": False,
+    "custom_links": {
+        "credentials": [
+            {
+                "name": "Request VC",
+                "url": "/admin/request-vc/",
+                "icon": "fas fa-id-badge",
+                "permissions": ["auth.request_vc"],
+            },
+        ]
+    },
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -370,11 +388,6 @@ JAZZMIN_UI_TWEAKS = {
     "dark_mode_theme": "superhero",
 }
 
-# Waffle envs
-WAFFLE_CREATE_MISSING_FLAGS = True
-WAFFLE_CREATE_MISSING_SWITCHES = True
-WAFFLE_SWITCH_DEFAULT = os.environ.get("ACTIVE_SWITCHES", True)
-WAFFLE_CREATE_MISSING_SAMPLES = True
 
 ASGI_APPLICATION = "project.asgi.application"
 
@@ -382,13 +395,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
-}
-
-
-WS_FEATURE_TOGGLE_PATH = (
-    os.environ.get("WS_FEATURE_TOGGLE_PATH")
-    or "ws://127.0.0.1:8000/ws/features/updates"
-)
+}  # TODO USE REDIS ?
 
 
 INTERNAL_IPS = ["*"]
@@ -403,17 +410,28 @@ REST_FRAMEWORK = {
     ]
 }
 
+AWS_ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY", "")
+AWS_SECRET_KEY = os.environ.get("AWS_SECRET_KEY", "")
+AWS_BUCKET = os.environ.get("AWS_BUCKET", "")
+
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_RESULT_EXTENDED = True
+
 
 ##CONFIG ENVS
-env = Env()
-env.read_env()
 VC_SERVICE_URL = os.environ.get("VC_SERVICE_URL", "")
 DID = os.environ.get("DID", "")
-PRIVATE_KEY = env.dict("PRIVATE_KEY", subcast=str)
-PUBLIC_KEY = env.dict("PUBLIC_KEY", subcast=str)
 ENTITY_URL = os.environ.get("ENTITY_URL", "")
 ENTITY_API_KEY = os.environ.get("ENTITY_API_KEY", "")
 APPEND_SLASH = os.environ.get("APPEND_SLASH", "False")
+
+EBSI_DIDR_URL = os.environ.get(
+    "EBSI_DIDR_URL", "https://api-pilot.ebsi.eu/did-registry/v5/identifiers"
+)
+EBSI_TIR_URL = os.environ.get(
+    "EBSI_TIR_URL",
+    "https://api-pilot.ebsi.eu/trusted-issuers-registry/v5/issuers",
+)
 
 DEVELOPER_MOCKUP_ENTITIES = readEnvBool("DEVELOPER_MOCKUP_ENTITIES", False)
 

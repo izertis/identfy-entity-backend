@@ -8,7 +8,15 @@ from typing import Any, List
 import requests
 from django.core.exceptions import BadRequest
 
+from common.utils.credential_offer_utils import (
+    check_requested_types_for_credential_offer,
+    generate_credential_offer,
+)
+from common.utils.crypto_utils import calculate_jwk_thumbprint
+from ebsi.enums import AccreditationTypes
+from ebsi.models import EbsiAccreditation
 from openid.enums import RevocationTypes
+from organizations.models import OrganizationKeys
 from project import settings
 
 from .abstractions import AOpenidService
@@ -31,13 +39,21 @@ from .serializers import (
 class OpenidService(AOpenidService):
     @staticmethod
     def get_credential_offer_by_pk(
-        pk: str, pre_authorized_code: str | None, user_pin_required: bool | None
+        pk: str,
+        pre_authorized_code: str | None,
+        user_pin_required: bool | None,
+        requested_vc_types: List[str] | None,
     ) -> dict | IssuanceOfferResponse | None:
         offer = IssuanceInformation.objects.filter(pk=pk).first()
 
         if not offer:
             return None
         else:
+            if len(requested_vc_types) > 0:
+                try:
+                    offer = generate_credential_offer(offer, requested_vc_types)
+                except Exception:
+                    return None
             credential_offer = {
                 "credential_issuer": f"{settings.BACKEND_DOMAIN}",
                 "credentials": offer.credential_issuer_metadata[
@@ -65,20 +81,27 @@ class OpenidService(AOpenidService):
     def get_credential_offer_by_issuer(
         pre_authorized_code: str | None,
         user_pin_required: bool | None,
+        requested_vc_types: list[str] | None,
     ) -> dict | IssuanceCredentialOfferSerializer | None:
-        offer: IssuanceInformation = IssuanceInformation.objects.get()
+        if len(requested_vc_types) > 0:
+            try:
+                check_requested_types_for_credential_offer(requested_vc_types)
+            except Exception:
+                return None
+        offer: IssuanceInformation = IssuanceInformation.objects.first()
         url = f"{settings.BACKEND_DOMAIN}/offers/{str(offer.pk)}"
 
+        params = {}
+        if requested_vc_types is not None:
+            params["requested_vc_types"] = requested_vc_types
+
         if pre_authorized_code:
-            req = requests.models.PreparedRequest()
-            req.prepare_url(
-                url,
-                {
-                    "pre-authorized_code": pre_authorized_code,
-                    "user_pin_required": user_pin_required,
-                },
-            )
-            url = req.url
+            params["user_pin_required"] = user_pin_required
+            params["pre-authorized_code"] = pre_authorized_code
+
+        req = requests.models.PreparedRequest()
+        req.prepare_url(url, params)
+        url = req.url
         get_offer_uri = urllib.parse.quote_plus(url)
         complete_url = (
             f"openid-credential-offer://?credential_offer_uri={get_offer_uri}"
@@ -98,7 +121,6 @@ class OpenidService(AOpenidService):
     @staticmethod
     def get_authorization_server_metadata() -> AuthorizationServerSerializer | None:
         url = f"{settings.VC_SERVICE_URL}/auth/.well-known/openid-configuration"
-
         params = {
             "issuerUri": f"{settings.BACKEND_DOMAIN}",
         }
@@ -125,18 +147,17 @@ class OpenidService(AOpenidService):
         return result
 
     @staticmethod
-    def authorize(
-        request: Any,
-    ) -> ResponseSerializer | None:
+    def authorize(request: Any) -> ResponseSerializer | None:
         url = f"{settings.VC_SERVICE_URL}/auth/authorize"
         request_get = request.GET
+
         request = request_get.get("request")
         if request is None:
             params = {
                 "response_type": request_get["response_type"],
                 "scope": request_get["scope"],
                 "issuer_state": request_get.get("issuer_state"),
-                "state": request_get["state"],
+                "state": request_get.get("state"),
                 "client_id": request_get["client_id"],
                 "redirect_uri": request_get["redirect_uri"],
                 "nonce": request_get.get("nonce"),
@@ -144,14 +165,11 @@ class OpenidService(AOpenidService):
                 "code_challenge_method": request_get.get("code_challenge_method"),
                 "authorization_details": request_get.get("authorization_details"),
                 "client_metadata": request_get["client_metadata"],
-                "expectedIssuerState": request_get.get("issuer_state"),
             }
         else:
             params = request_get.dict()
 
         params["issuerUri"] = f"{settings.BACKEND_DOMAIN}"
-        params["privateKeyJwk"] = json.dumps(settings.PRIVATE_KEY)
-        params["publicKeyJwk"] = json.dumps(settings.PUBLIC_KEY)
 
         try:
             response = requests.request("GET", url, params=params)
@@ -169,17 +187,20 @@ class OpenidService(AOpenidService):
     ) -> ResponseSerializer:
         url = f"{settings.VC_SERVICE_URL}/auth/direct_post"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
-
         payload = {
             "issuerUri": f"{settings.BACKEND_DOMAIN}",
-            "privateKeyJwk": json.dumps(settings.PRIVATE_KEY),
             "vp_token": request.get("vp_token") or None,
             "id_token": request.get("id_token") or None,
             "presentation_submission": request.get("presentation_submission") or None,
         }
 
         try:
-            response = requests.request("POST", url, headers=headers, data=payload)
+            response = requests.request(
+                "POST",
+                url,
+                headers=headers,
+                data=payload,
+            )
         except Exception as e:
             raise Exception(e)
 
@@ -190,9 +211,7 @@ class OpenidService(AOpenidService):
         return return_dict
 
     @staticmethod
-    def token_request(
-        request: Any,
-    ) -> ResponseSerializer:
+    def token_request(request: Any) -> ResponseSerializer:
         url = f"{settings.VC_SERVICE_URL}/auth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
@@ -206,8 +225,6 @@ class OpenidService(AOpenidService):
             "client_assertion": request.get("client_assertion") or None,
             "client_assertion_type": request.get("client_assertion_type") or None,
             "issuerUri": f"{settings.BACKEND_DOMAIN}",
-            "privateKeyJwk": json.dumps(settings.PRIVATE_KEY),
-            "publicKeyJwk": json.dumps(settings.PUBLIC_KEY),
         }
 
         try:
@@ -227,20 +244,11 @@ class OpenidService(AOpenidService):
 
     @staticmethod
     def get_public_jwk_by_issuer() -> dict | None:
-        public_key_jwk = settings.PUBLIC_KEY
-        response = {
-            "keys": [
-                {
-                    "kty": public_key_jwk["kty"],
-                    "crv": public_key_jwk["crv"] or None,
-                    "alg": public_key_jwk["alg"],
-                    "x": public_key_jwk["x"] or None,
-                    "y": public_key_jwk["y"] or None,
-                    "kid": public_key_jwk["kid"],
-                }
-            ]
-        }
-        return response
+        keys = OrganizationKeys.objects.values_list("value", flat=True)
+        for key in keys:
+            thumprint = calculate_jwk_thumbprint(key)
+            key["kid"] = thumprint
+        return {"keys": keys}
 
     @staticmethod
     def get_claims_validation(data: Any) -> ClaimsVerificationSerializer:
@@ -253,7 +261,7 @@ class OpenidService(AOpenidService):
         else:
             headers = {}
             if entity_api_key:
-                headers = {"Authorization": entity_api_key}
+                headers = {"X-API-KEY": entity_api_key}
             try:
                 response = requests.request(
                     "POST",
@@ -268,34 +276,23 @@ class OpenidService(AOpenidService):
         return content
 
     @staticmethod
-    def exchange_preauth(code: str, pin: int) -> dict:
-        entity_url = settings.ENTITY_URL
-        entity_api_key = settings.ENTITY_API_KEY
-
-        params = {"pin": pin}
-        if entity_api_key:
-            headers = {"Authorization": entity_api_key}
-        try:
-            response = requests.request(
-                "GET",
-                f"{entity_url}/preauth/exchange/{code}",
-                params=params,
-                headers=headers,
-            )
-        except Exception as e:
-            raise Exception(e)
-
-        content = json.loads(response.content.decode("utf-8"))
-
-        return_dict = {"status_code": response.status_code, "content": content}
-        return return_dict
-
-    @staticmethod
     def retrieve_issuance_flow(vc_type: str) -> dict | None:
         issuance_flow = IssuanceFlow.objects.filter(
             credential_types=vc_type,
         ).first()
         if not issuance_flow:
+            if vc_type in AccreditationTypes.values():
+                ebsi_accreditation = EbsiAccreditation.objects.filter(
+                    type=vc_type
+                ).first()
+                if ebsi_accreditation is not None:
+                    return {
+                        "status_code": 200,
+                        "content": IssuanceFlowSerializer(
+                            ebsi_accreditation.to_scope_action()
+                        ).data,
+                    }
+
             return {
                 "status_code": 404,
                 "content": "Unssuported requested credential",
@@ -318,8 +315,6 @@ class OpenidService(AOpenidService):
 
         payload = {
             "issuerUri": f"{settings.BACKEND_DOMAIN}",
-            "privateKeyJwk": json.dumps(settings.PRIVATE_KEY),
-            "publicKeyJwk": json.dumps(settings.PUBLIC_KEY),
             "verify_flow": VerifyFlowSerializer(offer).data,
         }
         if state:

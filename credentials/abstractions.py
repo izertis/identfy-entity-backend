@@ -10,16 +10,18 @@ class ACredentialService(ABC):
     @staticmethod
     @abstractmethod
     def credentials(
-        request: Any,
-        token: str,
-    ) -> List[CredentialResponseSerializer] | CredentialResponseSerializer | None: ...
+        request: Any, token: str, issuer: str
+    ) -> List[CredentialResponseSerializer] | CredentialResponseSerializer | None:
+        ...
 
     @staticmethod
     @abstractmethod
-    def deferred_credentials(token: str) -> CredentialResponseSerializer | None: ...
+    def deferred_credentials(token: str, issuer_id: str) -> CredentialResponseSerializer | None:
+        ...
 
     @staticmethod
     @abstractmethod
     def external_data(
-        schema: str, user_id: str | None
-    ) -> ExternalDataResponse | None: ...
+        issuer_id: str, schema: str, user_id: str | None
+    ) -> ExternalDataResponse | None:
+        ...

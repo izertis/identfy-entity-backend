@@ -1,10 +1,6 @@
 from enum import Enum
 
 
-class OpenidSwitches(str, Enum):
-    OpenidSwitch = "openid services"
-
-
 class ScopeResponseType(str, Enum):
     vp_token = "vp_token"
     id_token = "id_token"

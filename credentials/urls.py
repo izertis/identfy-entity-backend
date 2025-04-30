@@ -5,5 +5,5 @@ from .views import CredentialAuthView, CredentialsView
 router = SimpleRouter()
 
 router.register(r"", CredentialsView, "Credentials")
-router.register(r"", CredentialAuthView, "Credentials")
+router.register(r"", CredentialAuthView, "CredentialAuth")
 urlpatterns = router.urls

@@ -15,7 +15,7 @@ class AOpenidService(ABC):
     @staticmethod
     @abstractmethod
     def get_credential_offer_by_issuer(
-        client_id: str | None,
+        issuer_id: str, client_id: str | None
     ) -> dict | IssuanceCredentialOfferSerializer | None: ...
 
     @staticmethod
@@ -24,36 +24,36 @@ class AOpenidService(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_credential_issuer_metadata_by_issuer() -> dict | None: ...
+    def get_credential_issuer_metadata_by_issuer(
+        issuer: str,
+    ) -> dict | None: ...
 
     @staticmethod
     @abstractmethod
-    def get_authorization_server_metadata() -> AuthorizeResponseSerializer | None: ...
+    def get_authorization_server_metadata(
+        issuer: str,
+    ) -> AuthorizeResponseSerializer | None: ...
 
     @staticmethod
     @abstractmethod
-    def authorize(
-        request: object,
-    ) -> ResponseSerializer: ...
+    def authorize(request: object, issuer: str) -> ResponseSerializer: ...
 
     @staticmethod
     @abstractmethod
     def direct_post(
-        request: CreatedDirectPostSerializer,
+        request: CreatedDirectPostSerializer, issuer_id: str
     ) -> ResponseSerializer: ...
 
     @staticmethod
     @abstractmethod
     def token_request(
-        request: TokenRequestSerializer,
+        request: TokenRequestSerializer, issuer: str
     ) -> ResponseSerializer: ...
 
     @staticmethod
     @abstractmethod
-    def get_public_jwk_by_issuer() -> dict | None: ...
+    def get_public_jwk_by_issuer(issuer_id: str) -> dict | None: ...
 
     @staticmethod
     @abstractmethod
-    def get_claims_validation(
-        request: object,
-    ) -> dict | None: ...
+    def get_claims_validation(request: object, issuer_id: str) -> dict | None: ...

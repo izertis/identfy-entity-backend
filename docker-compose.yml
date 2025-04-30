@@ -1,8 +1,9 @@
 services:
-
+  redis:
+    image: redis:7
 
   postgres:
-    image: postgres:12
+    image: postgres:13
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -13,22 +14,39 @@ services:
       context: .
       dockerfile: Dockerfile
     image: identfy-backend
+    command: sh ./entrypoint.sh
     environment:
-      - SECRET_KEY=Local
-      - "BACKEND_DOMAIN=http://localhost:8000"
       - DJANGO_SETTINGS_MODULE=project.settings
       - DEBUG=1
-      - DID=did:ebsi:zzpYmwyZhHEyDUgKKXmEjeW
-      - PRIVATE_KEY= d=1xV_KMmkExfsv5onKJBLNHYP2z-HEWBSBV205uVFhWU, x=ckG4pp0LYzoLlwH2nOlfSDQBB_QWUfY_FtEpZXyPSk8, y=go7hlsEYr3xrBReOOGrU_VWFIRstrWqLTVgkuBPhEAw, alg=ES256, crv=P-256, ext=True, kid=WwrwmJ5N_NiOXCZVt4yEIZBCWaBqCZIhFy4NXlV7tps, kty=EC
-      - PUBLIC_KEY= x=ckG4pp0LYzoLlwH2nOlfSDQBB_QWUfY_FtEpZXyPSk8, y=go7hlsEYr3xrBReOOGrU_VWFIRstrWqLTVgkuBPhEAw, alg=ES256, crv=P-256, ext=True, kid=WwrwmJ5N_NiOXCZVt4yEIZBCWaBqCZIhFy4NXlV7tps, kty=EC
-
     volumes:
       - .:/code/
     ports:
       - 8000:8000
     depends_on:
       - postgres
+      - redis
 
+  celery:
+    image: identfy-backend
+    command: celery -A project worker -l info -E
+    environment:
+      - REDIS_HOST=redis
+      - "BACKEND_DOMAIN=http://localhost:8000"
+      - REDIS_BROKER_URL=redis://redis:6379/0
+      - DEBUG=1
+    volumes:
+      - .:/code/
+    depends_on:
+      - redis
+      - postgres
+
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=8888
+    ports:
+      - 8888:8888
 
 volumes:
   postgres_data:

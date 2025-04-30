@@ -13,12 +13,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from waffle.decorators import waffle_switch
 
 from openid.models import NonceManager, PresentationDefinition, VerifyFlow
 from openid.services.generateqr import GenerateQr
 
-from .enums import OpenidSwitches
 from .serializers import (
     AuthorizationServerSerializer,
     AuthorizeResponseSerializer,
@@ -60,19 +58,24 @@ class OpenidView(ViewSet):
                 description="User pin required",
                 type=openapi.TYPE_BOOLEAN,
             ),
+            openapi.Parameter(
+                "vc_types",
+                openapi.IN_QUERY,
+                description="Credential types to include in the offer",
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_STRING),
+                collectionFormat="multi",
+            ),
         ],
         operation_description="GET Credential Offer",
         responses={302: openapi.Response("", IssuanceOfferResponse)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(detail=False, methods=["get"], url_path="credential-offer/url")
-    def get_credential_offer_same_device_by_issuer(
-        self,
-        request,
-    ):
+    def get_credential_offer_same_device_by_issuer(self, request):
         credential_offer = OpenidService.get_credential_offer_by_issuer(
             request.GET.get("pre-authorized_code"),
             request.GET.get("user_pin_required"),
+            request.query_params.getlist("vc_types"),
         )
         if credential_offer:
             url = IssuanceOfferResponse(credential_offer).data
@@ -101,19 +104,24 @@ class OpenidView(ViewSet):
                 description="User pin required",
                 type=openapi.TYPE_BOOLEAN,
             ),
+            openapi.Parameter(
+                "vc_types",
+                openapi.IN_QUERY,
+                description="Credential types to include in the offer",
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_STRING),
+                collectionFormat="multi",
+            ),
         ],
         operation_description="GET Credential Offer QR",
         responses={200: openapi.Response("", QrSerializer)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(detail=False, methods=["get"], url_path="credential-offer/qr")
-    def get_credential_offer_cross_device_by_issuer(
-        self,
-        request,
-    ):
+    def get_credential_offer_cross_device_by_issuer(self, request):
         credential_offer = OpenidService.get_credential_offer_by_issuer(
             request.GET.get("pre-authorized_code"),
             request.GET.get("user_pin_required"),
+            request.query_params.getlist("vc_types"),
         )
         if credential_offer:
             url = IssuanceOfferResponse(credential_offer).data
@@ -146,17 +154,25 @@ class OpenidView(ViewSet):
                 description="User pin required",
                 type=openapi.TYPE_BOOLEAN,
             ),
+            openapi.Parameter(
+                "requested_vc_types",
+                openapi.IN_QUERY,
+                description="Credential types to include in the offer",
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_STRING),
+                collectionFormat="multi",
+            ),
         ],
         operation_description="GET Credential Offer Json",
         responses={200: openapi.Response("", IssuanceOfferResponse)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(detail=False, methods=["get"], url_path=r"offers/(?P<pk>[^/.]+)")
     def get_credential_offer_by_pk(self, request, pk: str):
         credential_offer = OpenidService.get_credential_offer_by_pk(
             pk,
             request.GET.get("pre-authorized_code"),
             request.GET.get("user_pin_required"),
+            request.query_params.getlist("requested_vc_types"),
         )
         if credential_offer:
             return Response(
@@ -167,19 +183,16 @@ class OpenidView(ViewSet):
 
     @swagger_auto_schema(
         method="get",
+        manual_parameters=[],
         operation_description="GET Credential Issuer Metadata",
         responses={200: openapi.Response("", CredentialIssuerSerializer)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(
         detail=False,
         methods=["get"],
         url_path=".well-known/openid-credential-issuer",
     )
-    def get_credential_issuer_metadata_by_issuer(
-        self,
-        request,
-    ):
+    def get_credential_issuer_metadata_by_issuer(self, request):
         credential_issuer_metadata = (
             OpenidService.get_credential_issuer_metadata_by_issuer()
         )
@@ -190,6 +203,7 @@ class OpenidView(ViewSet):
 
     @swagger_auto_schema(
         method="get",
+        manual_parameters=[],
         operation_description="GET Authorization Server Metadata",
         responses={200: openapi.Response("", AuthorizationServerSerializer)},
     )
@@ -198,10 +212,7 @@ class OpenidView(ViewSet):
         methods=["get"],
         url_path=".well-known/openid-configuration",
     )
-    def get_authorization_server_metadata(
-        self,
-        request,
-    ):
+    def get_authorization_server_metadata(self, request):
         authorization_server_metadata = (
             OpenidService.get_authorization_server_metadata()
         )
@@ -332,6 +343,7 @@ class OpenidView(ViewSet):
 
     @swagger_auto_schema(
         method="post",
+        manual_parameters=[],
         request_body=CreatedDirectPostSerializer,
         operation_description="POST Direct_post",
         responses={302: openapi.Response("", AuthorizeResponseSerializer)},
@@ -357,9 +369,7 @@ class OpenidView(ViewSet):
         elif presentation_submission_required:
             return HttpResponseBadRequest("presentation_submission is required.")
 
-        direct_post = OpenidService.direct_post(
-            request_data,
-        )
+        direct_post = OpenidService.direct_post(request_data)
         code = direct_post.get("status_code")
         content = direct_post.get("content")
         if code == 302:
@@ -381,15 +391,13 @@ class OpenidView(ViewSet):
 
     @swagger_auto_schema(
         method="post",
+        manual_parameters=[],
         request_body=TokenRequestSerializer,
         operation_description="POST Token",
         responses={200: openapi.Response("", TokenResponseSerializer)},
     )
     @action(detail=False, methods=["post"], url_path="auth/token")
-    def token_request(
-        self,
-        request,
-    ):
+    def token_request(self, request):
         request_data = request.data
         if request_data.get("grant_type") is None:
             return HttpResponseBadRequest("Grant_type is required.")
@@ -420,41 +428,7 @@ class OpenidView(ViewSet):
 
     @swagger_auto_schema(
         method="get",
-        manual_parameters=[
-            openapi.Parameter(
-                "code",
-                openapi.IN_PATH,
-                description="Preauth Code",
-                type=openapi.TYPE_STRING,
-            ),
-            openapi.Parameter(
-                "pin",
-                openapi.IN_QUERY,
-                description="Pin",
-                type=openapi.TYPE_STRING,
-                required=False,
-            ),
-        ],
-        operation_description="GET Preauth token validation",
-        responses={
-            200: openapi.Response(
-                "",
-            )
-        },
-    )
-    @action(detail=False, methods=["get"], url_path="auth/token/(?P<code>\w+)")
-    def exchange_preauth(self, request, code: str):
-        exchange_preauth = OpenidService.exchange_preauth(code, request.GET.get("pin"))
-        code = exchange_preauth.get("status_code")
-        content = exchange_preauth.get("content")
-
-        return Response(
-            content,
-            status=code,
-        )
-
-    @swagger_auto_schema(
-        method="get",
+        manual_parameters=[],
         operation_description="GET Public Jwk",
         responses={200: openapi.Response("", PublicJwkSerializer)},
     )
@@ -468,15 +442,13 @@ class OpenidView(ViewSet):
 
     @swagger_auto_schema(
         method="post",
+        manual_parameters=[],
         request_body=ExternalDataRequest,
         operation_description="Post Claims Verification",
         responses={200: openapi.Response("", ClaimsVerificationSerializer)},
     )
     @action(detail=False, methods=["post"], url_path="presentations/external-data")
-    def get_claims_validation(
-        self,
-        request,
-    ):
+    def get_claims_validation(self, request):
         validation_result = OpenidService.get_claims_validation(request.data)
         if validation_result:
             return Response((validation_result))
@@ -491,6 +463,7 @@ class OpenidView(ViewSet):
                 openapi.IN_QUERY,
                 description="Verifiable Presentation Scope",
                 type=openapi.TYPE_STRING,
+                required=True,
             ),
             openapi.Parameter(
                 "state",
@@ -503,12 +476,8 @@ class OpenidView(ViewSet):
         operation_description="GET Presentation Offer",
         responses={302: openapi.Response("", PresentationResponse)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(detail=False, methods=["get"], url_path="presentation-offer-request/url")
-    def get_presentation_offer_same_device_by_verifier(
-        self,
-        request,
-    ):
+    def get_presentation_offer_same_device_by_verifier(self, request):
         presentation_offer = OpenidService.get_presentation_offer_url(
             request.GET.get("verify_flow"),
             request.GET.get("state"),
@@ -544,12 +513,8 @@ class OpenidView(ViewSet):
         operation_description="GET Presentation Offer QR",
         responses={200: openapi.Response("", QrSerializer)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(detail=False, methods=["get"], url_path="presentation-offer-request/qr")
-    def get_presentation_offer_cross_device_by_verifier(
-        self,
-        request,
-    ):
+    def get_presentation_offer_cross_device_by_verifier(self, request):
         presentation_offer = OpenidService.get_presentation_offer_url(
             request.GET.get("verify_flow"),
             request.GET.get("state"),
@@ -582,13 +547,8 @@ class OpenidView(ViewSet):
         operation_description="GET Presentation Offer Json",
         responses={200: openapi.Response("", PresentationOfferJsonResponse)},
     )
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
     @action(detail=True, methods=["get"], url_path="presentation-offer")
-    def get_presentation_offer(
-        self,
-        request,
-        pk: str,
-    ):
+    def get_presentation_offer(self, request, pk: str):
         presentation_offer = OpenidService.create_presentation_offer(
             pk,
             request.GET.get("state"),
@@ -613,8 +573,7 @@ class PresentationDefinitionView(RetrieveModelMixin, GenericViewSet):
     serializer_class = PresentationDefinitionSerializer
     parser_classes = [JSONParser, FormParser, MultiPartParser]
 
-    @waffle_switch(OpenidSwitches.OpenidSwitch.value)
-    def retrieve(self, request, pk: str):
+    def retrieve(self, request):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
@@ -659,7 +618,6 @@ class ScopeActionView(ViewSet):
     @action(detail=False, methods=["get"], url_path="issuance-flow")
     def vc_issuance_flow(self, request):
         query_credential = request.GET.get("credential_types")
-
         if not query_credential:
             return HttpResponseBadRequest(
                 "Issuer and Credential_types queries are required"
@@ -672,13 +630,6 @@ class ScopeActionView(ViewSet):
     @swagger_auto_schema(
         method="get",
         manual_parameters=[
-            openapi.Parameter(
-                "verifier",
-                openapi.IN_QUERY,
-                description="Verifier Identifier",
-                required=True,
-                type=openapi.TYPE_STRING,
-            ),
             openapi.Parameter(
                 "scope",
                 openapi.IN_QUERY,
@@ -693,8 +644,7 @@ class ScopeActionView(ViewSet):
     @action(detail=False, methods=["get"], url_path="verify-flow")
     def verify_flow(self, request):
         query_scope = request.GET.get("scope")
-        query_verifier = request.GET.get("verifier")
-        if not query_verifier or not query_scope:
+        if not query_scope:
             return HttpResponseBadRequest("Verifier and Scope queries are required")
         verify_flow = VerifyFlow.objects.filter(
             scope=query_scope,

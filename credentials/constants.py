@@ -1,5 +1,5 @@
 EBSI_VC_TYPE = {
-  "VerifiableAttestation",
-  "VerifiableCredential",
-  "VerifiableAccreditation"
+    "VerifiableAttestation",
+    "VerifiableCredential",
+    "VerifiableAccreditation",
 }

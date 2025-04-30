@@ -21,7 +21,7 @@ class Command(BaseCommand):
             User.objects.create_superuser(
                 "identfy",
                 "identfy@identfy.org",
-                "identfy",  # USERNAME  # MAIL  # PASS
+                "identfy",  # USERNAME  # MAIdeployseL  # PASS
             )
         os.system("python manage.py permissions")
         # Change password to a strong one

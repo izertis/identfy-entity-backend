@@ -1,7 +1,6 @@
 import json
 import uuid
 
-import waffle
 from django.contrib import admin
 from django.db.models import JSONField
 from django.utils.safestring import mark_safe
@@ -11,9 +10,12 @@ from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import JsonLexer
 
+from ebsi.enums import AccreditationTypes
+from ebsi.models import EbsiAccreditation
+
+# from credentials.models import EbsiAccreditation, VerifiableCredential
 from project import settings
 
-from .enums import OpenidSwitches
 from .models import (
     IssuanceFlow,
     IssuanceInformation,
@@ -26,6 +28,7 @@ from .models import (
 class IssuanceInformationAdmin(admin.ModelAdmin):
     model = IssuanceInformation
     fields = (
+        "include_ebsi_accreditations",
         "credential_issuer_metadata_prettified",
         "qr_image",
         "url_link",
@@ -60,15 +63,30 @@ class IssuanceInformationAdmin(admin.ModelAdmin):
             }
             credentials_supported.append(credential_type)
 
+        if obj.include_ebsi_accreditations:
+            accreditations = EbsiAccreditation.objects.all()
+            for accreditation in accreditations:
+                types = [
+                    "VerifiableAttestation",
+                    "VerifiableCredential",
+                    accreditation.type,
+                ]
+                if (
+                    accreditation.type
+                    != AccreditationTypes.VerifiableAuthorisationToOnboard.value
+                ):
+                    types.insert(0, "VerifiableAccreditation")
+
+                credentials_supported.append(
+                    {
+                        "types": types,
+                        "format": "jwt_vc",
+                    }
+                )
+
         obj.credential_issuer_metadata["credentials_supported"] = credentials_supported
 
         super().save_model(request, obj, form, change)
-
-    def get_model_perms(self, request):
-        if not waffle.switch_is_active(OpenidSwitches.OpenidSwitch.value):
-            return {}
-
-        return super(IssuanceInformationAdmin, self).get_model_perms(request)
 
     # Show Pretty Metadata
     def credential_issuer_metadata_prettified(self, instance):
@@ -116,8 +134,7 @@ class IssuanceInformationAdmin(admin.ModelAdmin):
 
 class PresentationDefinitionAdmin(admin.ModelAdmin):
     model = PresentationDefinition
-    list_display = ("definition_id",)
-
+    list_display = ["definition_id"]
     search_fields = ["definition_id"]
     formfield_overrides = {
         JSONField: {"widget": JSONEditorWidget},
@@ -126,12 +143,6 @@ class PresentationDefinitionAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.definition_id = obj.definition_id or uuid.uuid4()
         super().save_model(request, obj, form, change)
-
-    def get_model_perms(self, request):
-        if not waffle.switch_is_active(OpenidSwitches.OpenidSwitch.value):
-            return {}
-
-        return super(PresentationDefinitionAdmin, self).get_model_perms(request)
 
 
 class IssuanceFlowAdmin(admin.ModelAdmin):

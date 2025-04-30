@@ -7,6 +7,7 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
+import project.custom_admin as custom_admin  # noqa: F401
 from user.views import LoginViewCustom
 
 from .settings import BACKEND_DOMAIN
@@ -56,12 +57,12 @@ schema_view = get_schema_view(
 urlpatterns = [
     path("", include("credentials.urls")),
     path("", include("openid.urls")),
+    path("", include("organizations.urls")),
     path("api/api-token-auth", LoginViewCustom.as_view()),
     path(
         "api/password_reset/",
         include("django_rest_passwordreset.urls", namespace="password_reset"),
     ),
-    path("features/", include("feature_toggle_manager.urls")),
     path(
         "password_reset/",
         auth_views.PasswordResetView.as_view(

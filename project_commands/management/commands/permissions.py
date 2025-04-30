@@ -7,6 +7,15 @@ from django.core.management.base import BaseCommand
 from credentials.models import (
     IssuedVerifiableCredential,
     StatusList2021,
+    VerifiableCredential,
+)
+from ebsi.models import (
+    AccreditationToAccredit,
+    AccreditationToAttest,
+    AccreditationToOnboard,
+    EbsiAccreditation,
+    EbsiAccreditationWhiteList,
+    PotentialAccreditationInformation,
 )
 from openid.models import (
     IssuanceFlow,
@@ -15,6 +24,7 @@ from openid.models import (
     PresentationDefinition,
     VerifyFlow,
 )
+from organizations.models import OrganizationKeys
 
 
 class Command(BaseCommand):
@@ -35,6 +45,31 @@ class Command(BaseCommand):
             admins = Group.objects.filter(name="OWNER").first() or Group.objects.create(
                 name="OWNER"
             )
+
+            print("Creating Organizations permissions.")
+
+            # Organization Keys
+            organization_keys = ContentType.objects.get_for_model(OrganizationKeys)
+            view_permission = Permission.objects.get(
+                codename="view_organizationkeys", content_type=organization_keys
+            )
+            add_permission = Permission.objects.get(
+                codename="add_organizationkeys", content_type=organization_keys
+            )
+            change_permission = Permission.objects.get(
+                codename="change_organizationkeys", content_type=organization_keys
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_organizationkeys", content_type=organization_keys
+            )
+            users.permissions.add(view_permission)
+            users.save()
+            admins.permissions.add(
+                view_permission, add_permission, change_permission, delete_permission
+            )
+            admins.save()
+            services.permissions.add(view_permission)
+            services.save()
 
             print("Creating Openid permissions.")
 
@@ -184,6 +219,34 @@ class Command(BaseCommand):
             )
             admins.save()
 
+            # Verifiable Credentials
+            verifiable_credentials = ContentType.objects.get_for_model(
+                VerifiableCredential
+            )
+            view_permission = Permission.objects.get(
+                codename="view_verifiablecredential",
+                content_type=verifiable_credentials,
+            )
+            add_permission = Permission.objects.get(
+                codename="add_verifiablecredential",
+                content_type=verifiable_credentials,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_verifiablecredential",
+                content_type=verifiable_credentials,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_verifiablecredential",
+                content_type=verifiable_credentials,
+            )
+
+            users.permissions.add(view_permission)
+            users.save()
+            admins.permissions.add(
+                view_permission, add_permission, change_permission, delete_permission
+            )
+            admins.save()
+
             # Status List
             status_list = ContentType.objects.get_for_model(StatusList2021)
             view_permission = Permission.objects.get(
@@ -207,6 +270,165 @@ class Command(BaseCommand):
                 view_permission, add_permission, change_permission, delete_permission
             )
             services.save()
+
+            print("Creating Ebsi permissions.")
+
+            # PotentialAccreditationInformation
+            potential_accreditation_information = ContentType.objects.get_for_model(
+                PotentialAccreditationInformation
+            )
+            view_permission = Permission.objects.get(
+                codename="view_potentialaccreditationinformation",
+                content_type=potential_accreditation_information,
+            )
+            add_permission = Permission.objects.get(
+                codename="add_potentialaccreditationinformation",
+                content_type=potential_accreditation_information,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_potentialaccreditationinformation",
+                content_type=potential_accreditation_information,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_potentialaccreditationinformation",
+                content_type=potential_accreditation_information,
+            )
+
+            # admins.permissions.add(
+            #     view_permission, add_permission, change_permission, delete_permission
+            # )
+            # admins.save()
+
+            # EbsiAccreditation
+            ebsi_accreditation = ContentType.objects.get_for_model(EbsiAccreditation)
+            view_permission = Permission.objects.get(
+                codename="view_ebsiaccreditation",
+                content_type=ebsi_accreditation,
+            )
+            add_permission = Permission.objects.get(
+                codename="add_ebsiaccreditation",
+                content_type=ebsi_accreditation,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_ebsiaccreditation",
+                content_type=ebsi_accreditation,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_ebsiaccreditation",
+                content_type=ebsi_accreditation,
+            )
+
+            # admins.permissions.add(
+            #     view_permission, add_permission, change_permission, delete_permission
+            # )
+            # admins.save()
+            # EbsiAccreditationWhiteList
+            ebsi_accreditation_white_list = ContentType.objects.get_for_model(
+                EbsiAccreditationWhiteList
+            )
+            view_permission = Permission.objects.get(
+                codename="view_ebsiaccreditationwhitelist",
+                content_type=ebsi_accreditation_white_list,
+            )
+
+            add_permission = Permission.objects.get(
+                codename="add_ebsiaccreditationwhitelist",
+                content_type=ebsi_accreditation_white_list,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_ebsiaccreditationwhitelist",
+                content_type=ebsi_accreditation_white_list,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_ebsiaccreditationwhitelist",
+                content_type=ebsi_accreditation_white_list,
+            )
+
+            # admins.permissions.add(
+            #     view_permission, add_permission, change_permission, delete_permission
+            # )
+            # admins.save()
+
+            # AccreditationToAttest
+            accreditation_to_attest = ContentType.objects.get(
+                app_label=AccreditationToAttest._meta.app_label,
+                model=AccreditationToAttest._meta.object_name.lower(),
+            )
+
+            view_permission = Permission.objects.get(
+                codename="view_accreditationtoattest",
+                content_type=accreditation_to_attest,
+            )
+
+            add_permission = Permission.objects.get(
+                codename="add_accreditationtoattest",
+                content_type=accreditation_to_attest,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_accreditationtoattest",
+                content_type=accreditation_to_attest,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_accreditationtoattest",
+                content_type=accreditation_to_attest,
+            )
+
+            # admins.permissions.add(
+            #     view_permission, add_permission, change_permission, delete_permission
+            # )
+            # admins.save()
+
+            # AccreditationToAccredit
+            accreditation_to_accredit = ContentType.objects.get(
+                app_label=AccreditationToAccredit._meta.app_label,
+                model=AccreditationToAccredit._meta.object_name.lower(),
+            )
+
+            view_permission = Permission.objects.get(
+                codename="view_accreditationtoaccredit",
+                content_type=accreditation_to_accredit,
+            )
+            add_permission = Permission.objects.get(
+                codename="add_accreditationtoaccredit",
+                content_type=accreditation_to_accredit,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_accreditationtoaccredit",
+                content_type=accreditation_to_accredit,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_accreditationtoaccredit",
+                content_type=accreditation_to_accredit,
+            )
+
+            # AccreditationToOnboard
+            accreditation_to_onboard = ContentType.objects.get(
+                app_label=AccreditationToOnboard._meta.app_label,
+                model=AccreditationToOnboard._meta.object_name.lower(),
+            )
+
+            view_permission = Permission.objects.get(
+                codename="view_accreditationtoonboard",
+                content_type=accreditation_to_onboard,
+            )
+
+            add_permission = Permission.objects.get(
+                codename="add_accreditationtoonboard",
+                content_type=accreditation_to_onboard,
+            )
+            change_permission = Permission.objects.get(
+                codename="change_accreditationtoonboard",
+                content_type=accreditation_to_onboard,
+            )
+            delete_permission = Permission.objects.get(
+                codename="delete_accreditationtoonboard",
+                content_type=accreditation_to_onboard,
+            )
+
+            # admins.permissions.add(
+            #     view_permission, add_permission, change_permission, delete_permission
+            # )
+            # admins.save()
 
             print("Creating Django permissions.")
 
@@ -299,6 +521,18 @@ class Command(BaseCommand):
                 view_permission, add_permission, change_permission, delete_permission
             )
             users.save()
+
+            print("Creating Holder permissions.")
+
+            # Request VC
+            request_vc_permission, _ = Permission.objects.get_or_create(
+                codename="request_vc",
+                name="Can request Verifiable Credentials",
+                content_type=users_perm,
+            )
+            admins.permissions.add(request_vc_permission)
+            admins.save()
+
             print("Success.")
         except Exception as e:
             print("Operation failed because: " + str(e))

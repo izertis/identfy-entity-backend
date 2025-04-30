@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from ebsi.models import EbsiTermsOfUse
+
 from .models import IssuanceFlow, NonceManager, PresentationDefinition, VerifyFlow
 
 
@@ -47,7 +49,7 @@ class AuthorizationServerSerializer(serializers.Serializer):
     request_parameter_supported = serializers.BooleanField()
     request_uri_parameter_supported = serializers.BooleanField()
     token_endpoint_auth_methods_supported = serializers.ListField()
-    vp_formats_supported = serializers.ListField()
+    vp_formats_supported = serializers.JSONField()
     subject_syntax_types_supported = serializers.ListField()
     subject_trust_frameworks_supported = serializers.ListField()
     id_token_types_supported = serializers.ListField()
@@ -103,6 +105,10 @@ class TokenResponseSerializer(serializers.Serializer):
     expires_in = serializers.IntegerField()
     c_nonce = serializers.CharField(max_length=1255)
     c_nonce_expires_in = serializers.IntegerField()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        return {k: v for k, v in data.items() if v is not None}
 
 
 class CredentialRequestSerializer(serializers.Serializer):
@@ -163,6 +169,9 @@ class NonceManagerSerializer(serializers.ModelSerializer):
 
 class IssuanceFlowSerializer(serializers.ModelSerializer):
     presentation_definition = PresentationDefinitionSerializer(read_only=True)
+    terms_of_use = serializers.SlugRelatedField(
+        queryset=EbsiTermsOfUse.objects.all(), slug_field="attribute_id"
+    )
 
     class Meta:
         model = IssuanceFlow
@@ -175,6 +184,7 @@ class IssuanceFlowSerializer(serializers.ModelSerializer):
             "presentation_definition",
             "revocation",
             "expires_in",
+            "terms_of_use",
         ]
 
     def to_representation(self, instance):

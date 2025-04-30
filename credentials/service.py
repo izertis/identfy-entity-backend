@@ -3,16 +3,17 @@ from __future__ import annotations
 import base64
 import gzip
 import json
-from typing import List
+from typing import Any, List
 
 import jwt
 import requests
-from django.core.exceptions import BadRequest
 
-from common.constants.ebsi_constants import EBSI_IDENTIFIER
 from credentials.constants import EBSI_VC_TYPE
 from credentials.models import IssuedVerifiableCredential, StatusList2021
 from credentials.strategy import CredentialStrategy
+from ebsi.enums import AccreditationTypes
+from ebsi.models import EbsiAccreditationWhiteList
+from ebsi.service import EbsiService
 from project import settings
 
 from .abstractions import ACredentialService
@@ -32,20 +33,17 @@ class CredentialService(ACredentialService):
         request: list | EbsiCredentialRequestSerializer,
         token: str,
     ) -> List[ResponseSerializer] | ResponseSerializer | None:
-        did = settings.DID
         response: ResponseSerializer = {}
         strategy = CredentialStrategy(request, token)
         credential = None
-
-        if did.startswith(EBSI_IDENTIFIER) or did.startswith("did:key"):
-            ebsi_strategy = strategy.ebsi_credentials()
-            response = {
-                "status_code": ebsi_strategy["status_code"],
-                "content": ebsi_strategy["content"],
-            }
-            credential = ebsi_strategy["credential"]
-        else:
-            raise BadRequest("Not a valid did type")
+        # TODO: EBSI requires an did:key for the conformance test but
+        # in production it should always be a did:ebsi
+        ebsi_strategy = strategy.ebsi_credentials()
+        response = {
+            "status_code": ebsi_strategy["status_code"],
+            "content": ebsi_strategy["content"],
+        }
+        credential = ebsi_strategy["credential"]
 
         if credential:
             CredentialService.__register_openid_vc_id(credential, token)
@@ -54,10 +52,8 @@ class CredentialService(ACredentialService):
 
     @staticmethod
     def __register_openid_vc_id(credential, token=None):
-        headers = {
-            "Authorization": settings.ENTITY_API_KEY,
-            "Content-Type": "application/json",
-        }
+        # TODO: This must change in the future. Part of this code should be moved to VC Service
+        # This access_token should be looked at
 
         types = credential["type"]
         vc_type = None
@@ -75,7 +71,7 @@ class CredentialService(ACredentialService):
                 options={"verify_signature": False},
             )
             payload = token_decoded.get("payload")
-            if payload["isPreAuth"] is not None:
+            if not payload["sub"].startswith("did:"):
                 pre_code = payload["sub"]
 
         payload = {
@@ -89,6 +85,9 @@ class CredentialService(ACredentialService):
         if credential.get("expirationDate") is not None:
             payload["expiration_date"] = credential.get("expirationDate")
         try:
+            headers = {}
+            if settings.ENTITY_API_KEY:
+                headers = {"X-API-KEY": settings.ENTITY_API_KEY}
             requests.request(
                 "POST",
                 settings.ENTITY_URL + "/credentials/external-data",
@@ -108,10 +107,8 @@ class CredentialService(ACredentialService):
         }
 
         payload = {
-            "issuerUri": settings.BACKEND_DOMAIN,
+            "issuerUri": settings.BACKEND_DOMAIN + "/",
             "issuerDid": settings.DID,
-            "privateKeyJwk": settings.PRIVATE_KEY,
-            "publicKeyJwk": settings.PUBLIC_KEY,
         }
         try:
             response = requests.request("POST", url, headers=headers, json=payload)
@@ -127,7 +124,6 @@ class CredentialService(ACredentialService):
                 algorithms=None,
                 options={"verify_signature": False},
             )
-
             payload = jwt_decoded.get("payload")
             vc_content = payload["vc"]
             vc_types = vc_content["type"]
@@ -155,23 +151,55 @@ class CredentialService(ACredentialService):
     def external_data(
         vc_type: str, user_id: str | None, pin: str | None
     ) -> ExternalDataResponse | None:
-        requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += "@SECLEVEL=1"
-        entity_url = settings.ENTITY_URL
-        entity_api_key = settings.ENTITY_API_KEY
-        if not entity_url and settings.DEVELOPER_MOCKUP_ENTITIES:
+        if vc_type in AccreditationTypes.values():
+            # We don't need to ask an external source
+            white_list = EbsiAccreditationWhiteList.objects.filter(
+                type=vc_type, did=user_id
+            ).first()
+            if white_list is None:
+                return {
+                    "status_code": 403,
+                    "content": "Invalid DID for the requested VC",
+                }
+            accredited_for_content = []
+            schemas = white_list.schema.all()
+            terms_of_use = []
+            for information in schemas:
+                if information.accredited_schema is not None:
+                    accredited_for_content.append(
+                        {
+                            "types": information.accredited_for,
+                            "schemaId": information.accredited_schema,
+                        }
+                    )
+                terms_of_use.append(information.attribute_id)
+            body = {
+                "accreditedFor": accredited_for_content,
+                # "reservedAttributeId": "WIP-ATTRIBUTE-ID" # TODO: Change after tasks related to register VCs in EBSI are done
+            }
+            if (
+                vc_type == AccreditationTypes.VerifiableAccreditationToAttest
+                or vc_type == AccreditationTypes.VerifiableAccreditationToAccredit
+            ):
+                attribute_id = EbsiService.trusted_issuer_registry(
+                    user_id, terms_of_use[0], vc_type
+                )
+                body["reservedAttributeId"] = attribute_id
+            content = {"body": body, "termsOfUse": terms_of_use}
+            return {"status_code": 200, "content": content}
+        if not settings.ENTITY_URL and settings.DEVELOPER_MOCKUP_ENTITIES:
             # Return empty data
             body = {}
             status_code = 200
         else:
             params = {"vc_type": vc_type, "user_id": user_id, "pin": pin}
             headers = {}
-            if entity_api_key:
-                headers = {"Authorization": entity_api_key}
-
+            if settings.ENTITY_API_KEY:
+                headers = {"X-API-KEY": settings.ENTITY_API_KEY}
             try:
                 response = requests.request(
                     "GET",
-                    entity_url + "/credentials/external-data",
+                    settings.ENTITY_URL + "/credentials/external-data",
                     headers=headers,
                     params=params,
                     verify=False,
@@ -187,22 +215,19 @@ class CredentialService(ACredentialService):
 
     @staticmethod
     def register_deferred(request: DeferredRegistry) -> dict:
-        entity_url = settings.ENTITY_URL
-        entity_api_key = settings.ENTITY_API_KEY
-
-        if not entity_url and settings.DEVELOPER_MOCKUP_ENTITIES:
+        if not settings.ENTITY_URL and settings.DEVELOPER_MOCKUP_ENTITIES:
             # Return empty data
             content = "DEV_CODE"
             status_code = 200
         else:
             payload = request
-            headers = {}
-            if entity_api_key:
-                headers = {"Authorization": entity_api_key}
             try:
+                headers = {}
+                if settings.ENTITY_API_KEY:
+                    headers = {"X-API-KEY": settings.ENTITY_API_KEY}
                 response = requests.request(
                     "POST",
-                    entity_url + "/deferred/registry",
+                    settings.ENTITY_URL + "/deferred/registry",
                     headers=headers,
                     json=payload,
                 )
@@ -217,20 +242,18 @@ class CredentialService(ACredentialService):
 
     @staticmethod
     def exchange_deferred(code: str) -> dict:
-        entity_url = settings.ENTITY_URL
-        entity_api_key = settings.ENTITY_API_KEY
-        if not entity_url and settings.DEVELOPER_MOCKUP_ENTITIES:
+        if not settings.ENTITY_URL and settings.DEVELOPER_MOCKUP_ENTITIES:
             # Return empty data
             content = {"data": {}}
             status_code = 200
         else:
-            headers = {}
-            if entity_api_key:
-                headers = {"Authorization": entity_api_key}
             try:
+                headers = {}
+                if settings.ENTITY_API_KEY:
+                    headers = {"X-API-KEY": settings.ENTITY_API_KEY}
                 response = requests.request(
                     "GET",
-                    entity_url + "/deferred/exchange/" + code,
+                    settings.ENTITY_URL + "/deferred/exchange/" + code,
                     headers=headers,
                 )
             except Exception as e:
@@ -245,9 +268,9 @@ class CredentialService(ACredentialService):
     @staticmethod
     def issue_status_credential(status_list: StatusList2021) -> dict:
         # GET STATUS LIST AND FILL PARAMS
-
+        # status_list = issued_vc.status_list
         compressed_list = gzip.compress(status_list.content)
-        base64url_compressed_list = base64.urlsafe_b64encode(compressed_list)
+        base64url_compressed_list = base64.b64encode(compressed_list)
 
         url = settings.VC_SERVICE_URL + "/credentials/status"
         params = {
@@ -256,9 +279,8 @@ class CredentialService(ACredentialService):
             "listId": settings.BACKEND_DOMAIN
             + "/credentials/status/list/"
             + str(status_list.id),
-            "statusPurpose": "revocation",
+            "statusPurpose": "revocation",  # TODO: This could be configurable
             "statusList": base64url_compressed_list.decode("utf-8"),
-            "privateKeyJwk": settings.PRIVATE_KEY,
             "revocationType": "StatusList2021",
         }
 
@@ -274,13 +296,38 @@ class CredentialService(ACredentialService):
         return return_dict
 
     @staticmethod
+    def ebsi_accreditation_direct_issuance(request: Any) -> dict:
+        url = settings.VC_SERVICE_URL + "/ebsi/accreditation/issuance"
+        request_get = request.GET
+        type = request_get.get("type")
+        holder = request_get.get("holder")
+        if type is None or holder is None:
+            return {
+                "status_code": 400,
+                "content": "Missing 'type' or 'holder' parameter",
+            }
+        params = {
+            "issuerDid": settings.DID,
+            "issuerUri": settings.BACKEND_DOMAIN,
+            "accreditationType": type,
+            "holderDid": holder,
+        }
+        try:
+            response = requests.request("GET", url, params=params)
+        except Exception as e:
+            raise Exception(e)
+        return_dict = {
+            "status_code": response.status_code,
+            "content": json.loads(response.content.decode("utf-8")),
+        }
+        return return_dict
+
+    @staticmethod
     def change_credential_status(
         vc: IssuedVerifiableCredential, request: ChangeStatus
     ) -> dict:
         if vc.status:
             return {"status_code": 200, "message": "Previusly Revoked"}
-        if not vc.revocation_type:
-            return {"status_code": 404, "message": "Cannot revoke this credential"}
 
         if request.get("status") == "revoked":
             vc.status = True

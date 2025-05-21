@@ -164,8 +164,10 @@ class OpenidService(AOpenidService):
                 "code_challenge": request_get.get("code_challenge"),
                 "code_challenge_method": request_get.get("code_challenge_method"),
                 "authorization_details": request_get.get("authorization_details"),
-                "client_metadata": request_get["client_metadata"],
             }
+            client_metadata = request_get.get("client_metadata", default=None)
+            if client_metadata is not None:
+                params["client_metadata"] = client_metadata
         else:
             params = request_get.dict()
 

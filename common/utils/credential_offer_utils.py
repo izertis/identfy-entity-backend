@@ -27,8 +27,8 @@ def generate_credential_offer(
     for flow in issuance_flows:
         credential_type = {
             "types": [
-                "VerifiableAttestation",
                 "VerifiableCredential",
+                "VerifiableAttestation",
                 flow.credential_types,
             ],
             "format": "jwt_vc",  # Only support this format

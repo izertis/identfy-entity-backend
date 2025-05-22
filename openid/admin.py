@@ -55,8 +55,8 @@ class IssuanceInformationAdmin(admin.ModelAdmin):
         for issuance_flow in issuance_flows:
             credential_type = {
                 "types": [
-                    "VerifiableAttestation",
                     "VerifiableCredential",
+                    "VerifiableAttestation",
                     issuance_flow.credential_types,
                 ],
                 "format": "jwt_vc",  # Only support this format
@@ -67,8 +67,8 @@ class IssuanceInformationAdmin(admin.ModelAdmin):
             accreditations = EbsiAccreditation.objects.all()
             for accreditation in accreditations:
                 types = [
-                    "VerifiableAttestation",
                     "VerifiableCredential",
+                    "VerifiableAttestation",
                     accreditation.type,
                 ]
                 if (
